@@ -72,6 +72,12 @@ test("parseQrScanPayload handles various scan inputs", () => {
   assert.equal(parsedUrl.pass_code, "GP-26001000");
   assert.equal(parsedUrl.token, "secret123");
 
+  const secureUrl = "https://hostel.amitkumar.info.np/gate/verify?pass_id=e4d3c2b1-0000-4000-8000-000000000001#token=" + "a".repeat(64);
+  const parsedSecureUrl = parseQrScanPayload(secureUrl);
+  assert.equal(parsedSecureUrl.pass_id, "e4d3c2b1-0000-4000-8000-000000000001");
+  assert.equal(parsedSecureUrl.token, "a".repeat(64));
+  assert.equal(parsedSecureUrl.pass_code, null);
+
   // 5. Invalid / garbage payloads throw
   assert.throws(() => parseQrScanPayload(""));
   assert.throws(() => parseQrScanPayload("Hello World"));

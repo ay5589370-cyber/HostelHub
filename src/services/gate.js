@@ -2,12 +2,67 @@ import { supabase } from "../lib/supabase";
 
 const PAGE_SIZE = 25;
 
+async function invokeGateFunction(name, body) {
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (error) {
+    const response = error.context instanceof Response ? await error.context.clone().json().catch(() => null) : null;
+    throw new Error(response?.error || error.message || "The server request failed.");
+  }
+  return data;
+}
+
 export async function getOrCreateGatePass(leaveRequestId) {
   const { data, error } = await supabase.rpc("get_or_create_gate_pass", {
     p_leave_request_id: leaveRequestId,
   });
   if (error) throw error;
   return data;
+}
+
+export async function verifyGatePassWithEdge(input) {
+  return invokeGateFunction("gate-verification", input);
+}
+
+function localDayBounds(date = new Date()) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
+export async function getAdminGateMonitoring({ date = new Date(), studentId = "", eventType = "" } = {}) {
+  const { start, end } = localDayBounds(date);
+  const [inside, outside, exits, entries, overdue, overdueStudents] = await Promise.all([
+    supabase.from("student_presence").select("student_id", { count: "exact", head: true }).eq("status", "inside"),
+    supabase.from("student_presence").select("student_id", { count: "exact", head: true }).eq("status", "outside"),
+    supabase.from("gate_events").select("id", { count: "exact", head: true }).eq("event_type", "exit").eq("outcome", "accepted").gte("created_at", start).lt("created_at", end),
+    supabase.from("gate_events").select("id", { count: "exact", head: true }).eq("event_type", "entry").eq("outcome", "accepted").gte("created_at", start).lt("created_at", end),
+    supabase.from("student_presence").select("student_id", { count: "exact", head: true }).eq("status", "outside").lt("expected_return_at", new Date().toISOString()),
+    supabase.from("student_presence").select("student_id,expected_return_at,students(full_name,student_id),leave_requests!active_leave_id(request_number)").eq("status", "outside").lt("expected_return_at", new Date().toISOString()).order("expected_return_at", { ascending: true }).limit(25),
+  ]);
+  const failures = [inside, outside, exits, entries, overdue, overdueStudents].find((result) => result.error);
+  if (failures?.error) throw failures.error;
+
+  let query = supabase.from("gate_events").select(`id,event_type,outcome,created_at,gate_location,remarks,
+    students!inner(full_name,student_id), guard:profiles!gate_events_verified_by_fkey(full_name)`).gte("created_at", start).lt("created_at", end);
+  if (eventType) query = query.eq("event_type", eventType);
+  if (studentId.trim()) query = query.eq("students.student_id", studentId.trim());
+  const { data: movements, error } = await query.order("created_at", { ascending: false }).limit(100);
+  if (error) throw error;
+  return {
+    inside: inside.count || 0,
+    outside: outside.count || 0,
+    exits: exits.count || 0,
+    entries: entries.count || 0,
+    overdue: overdue.count || 0,
+    overdueStudents: overdueStudents.data || [],
+    movements: movements || [],
+  };
+}
+
+export function manageSecurityGuards(payload) {
+  return invokeGateFunction("security-guards", payload);
 }
 
 export async function listMyGatePasses() {
@@ -34,16 +89,10 @@ export async function verifyGateScan({ pass_id, token, pass_code, event_type, id
 }
 
 export async function manualGateOverride({ student_id, event_type, override_reason, leave_request_id }) {
-  const { data, error } = await supabase.rpc("manual_gate_override", {
-    p_data: {
-      student_id,
-      event_type,
-      override_reason: override_reason.trim(),
-      leave_request_id: leave_request_id || null,
-    },
+  return invokeGateFunction("gate-verification", {
+    action: "manual_override", student_id, event_type,
+    override_reason: override_reason.trim(), leave_request_id,
   });
-  if (error) throw error;
-  return data;
 }
 
 export async function revokeGatePass(passId, reason) {

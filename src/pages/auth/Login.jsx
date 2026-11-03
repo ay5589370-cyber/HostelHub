@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -96,7 +96,7 @@ export function AuthLayout({ children }) {
       </section>
       <section className="auth-form-side">
         <div className="auth-top">
-          <span>HOSTELHUB / ADMINISTRATION</span>
+          <span>HOSTELHUB / AUTHORIZED ACCESS</span>
           <ThemeToggle />
         </div>
         {children}
@@ -108,6 +108,7 @@ export function AuthLayout({ children }) {
   );
 }
 export default function Login() {
+  const location = useLocation();
   const {
     session,
     profile,
@@ -136,8 +137,13 @@ export default function Login() {
       );
     }
   };
-  if (session && !loading && !profileError)
-    return <Navigate to={homeFor(profile)} replace />;
+  if (session && !loading && !profileError) {
+    const from = location.state?.from;
+    const returnTo = from?.pathname?.startsWith("/") && !from.pathname.startsWith("//")
+      ? `${from.pathname}${from.search || ""}${from.hash || ""}`
+      : homeFor(profile);
+    return <Navigate to={returnTo} replace />;
+  }
   return (
     <AuthLayout>
       <div className="auth-form">

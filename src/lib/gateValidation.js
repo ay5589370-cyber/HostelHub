@@ -76,8 +76,8 @@ export function parseQrScanPayload(rawText) {
   try {
     const url = new URL(trimmed);
     const code = url.searchParams.get("code") || url.searchParams.get("pass");
-    const token = url.searchParams.get("token");
-    const passId = url.searchParams.get("id");
+    const token = url.searchParams.get("token") || new URLSearchParams(url.hash.slice(1)).get("token");
+    const passId = url.searchParams.get("pass_id") || url.searchParams.get("id");
     if (code || token || passId) {
       return {
         pass_code: code ? code.toUpperCase() : null,

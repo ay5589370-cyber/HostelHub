@@ -1,2 +1,8 @@
 [functions.student-registration]
 verify_jwt = true
+
+[functions.gate-verification]
+verify_jwt = true
+
+[functions.security-guards]
+verify_jwt = true

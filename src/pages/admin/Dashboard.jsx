@@ -29,6 +29,7 @@ import {
 import { Button } from "../../components/ui/Button";
 import { StatCard } from "../../components/dashboard/StatCard";
 import { OccupancyChart } from "../../components/dashboard/OccupancyChart";
+import GateMonitoring from "./GateMonitoring";
 export default function Dashboard() {
   const { data, loading, error, reload } = useQuery(getDashboard);
   useEffect(() => subscribePhase2(reload), [reload]);
@@ -268,6 +269,7 @@ export default function Dashboard() {
           />
         </div>
       )}
+      <GateMonitoring />
       <div className="dashboard-grid">
         <section className="panel">
           <div className="panel-heading">

@@ -39,9 +39,9 @@ const StudentComplaints = lazy(() => import("../pages/student/Complaints"));
 const StudentComplaintDetail = lazy(
   () => import("../pages/student/ComplaintDetail"),
 );
-const SecurityDashboard = lazy(() => import("../pages/security/Dashboard"));
-const SecurityVisitors = lazy(() => import("../pages/visitors/Visitors"));
 const WardenVisitors = lazy(() => import("../pages/visitors/Visitors"));
+const GateVerify = lazy(() => import("../pages/security/GateVerify"));
+const SecurityGuards = lazy(() => import("../pages/admin/SecurityGuards"));
 import WardenDashboard from "../pages/warden/Dashboard";
 import { EmptyState, LoadingSkeleton } from "../components/common/Feedback";
 export default function AppRoutes() {
@@ -66,6 +66,7 @@ export default function AppRoutes() {
               <Route path="rooms" element={<Rooms />} />
               <Route path="leave-requests" element={<LeaveRequests />} />
               <Route path="gate" element={<GateManagement />} />
+              <Route path="security-guards" element={<SecurityGuards />} />
               <Route path="fees" element={<AdminFees />} />
               <Route path="inventory" element={<AdminInventory />} />
               <Route path="mess" element={<AdminMess />} />
@@ -88,7 +89,8 @@ export default function AppRoutes() {
                     n.path !== "reports" &&
                     n.path !== "notifications" &&
                     n.path !== "visitors" &&
-                    n.path !== "complaints",
+                    n.path !== "complaints" &&
+                    n.path !== "security-guards",
                 )
                 .map((module) => (
                   <Route
@@ -139,12 +141,9 @@ export default function AppRoutes() {
               element={<StaffComplaintDetail />}
             />
           </Route>
-          <Route element={<RoleGuard role="security" />}>
-            <Route path="/security/dashboard" element={<SecurityDashboard />} />
-            <Route
-              path="/security/visitors"
-              element={<SecurityVisitors mode="security" />}
-            />
+          <Route element={<RoleGuard role="security_guard" />}>
+            <Route path="/gate/scan" element={<GateVerify scan />} />
+            <Route path="/gate/verify" element={<GateVerify />} />
           </Route>
         </Route>
         <Route

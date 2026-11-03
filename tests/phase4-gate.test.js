@@ -906,4 +906,34 @@ test("Phase 4 Smart Gate Management & QR Verification database suite", async (t)
       });
     },
   );
+
+  await db.exec(
+    readFileSync(
+      new URL(
+        "../supabase/migrations/20261103151402_dedicated_security_guard_gate_verification.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
+
+  await as("authenticated", guardId, async () => {
+    const profile = (await db.query("select role from public.profiles where id=$1", [guardId])).rows[0];
+    assert.equal(profile.role, "security_guard");
+    const events = await db.query("select * from public.gate_events");
+    assert.equal(events.rows.length, 0, "guards cannot read the broad gate audit table");
+    await assert.rejects(
+      db.query("select public.record_gate_movement(null,null,null,null,null,null,null)"),
+      /permission denied/i,
+    );
+    await assert.rejects(
+      db.query("select public.verify_gate_scan('{}'::jsonb)"),
+      /permission denied/i,
+    );
+  });
+
+  await as("authenticated", adminId, async () => {
+    const metrics = await db.query("select public.gate_dashboard_metrics() result");
+    assert.ok(metrics.rows[0].result);
+  });
 });

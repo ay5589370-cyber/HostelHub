@@ -56,16 +56,16 @@ export function QrPassModal({ leaveRequestId, open, onClose }) {
   useEffect(() => {
     if (!passData || !canvasRef.current) return;
 
-    // Cryptographic payload contains only token and identifiers, no sensitive personal data
-    const payload = JSON.stringify({
-      v: 1,
-      pass_id: passData.pass_id,
-      token: passData.token,
-    });
+    // A bearer token and pass identifier only; all student details are fetched
+    // after the authenticated guard opens the page.
+    const verifyUrl = new URL("/gate/verify", window.location.origin);
+    verifyUrl.searchParams.set("pass_id", passData.pass_id);
+    // URL fragments are not sent to Vercel or included in HTTP referrers.
+    verifyUrl.hash = new URLSearchParams({ token: passData.token }).toString();
 
     QRCode.toCanvas(
       canvasRef.current,
-      payload,
+      verifyUrl.toString(),
       {
         width: 220,
         margin: 2,

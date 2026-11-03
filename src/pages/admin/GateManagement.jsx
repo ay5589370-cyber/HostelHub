@@ -70,6 +70,8 @@ export default function GateManagement() {
   // Manual Override Modal
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideStudentId, setOverrideStudentId] = useState("");
+  const [overrideRequestId, setOverrideRequestId] = useState("");
+  const [overrideLeaves, setOverrideLeaves] = useState([]);
   const [overrideDirection, setOverrideDirection] = useState("exit");
   const [overrideReason, setOverrideReason] = useState("");
   const [overrideSearch, setOverrideSearch] = useState("");
@@ -167,6 +169,19 @@ export default function GateManagement() {
     return () => clearTimeout(timer);
   }, [overrideSearch]);
 
+  useEffect(() => {
+    setOverrideRequestId("");
+    if (!overrideStudentId) { setOverrideLeaves([]); return; }
+    let alive = true;
+    supabase.from("leave_requests")
+      .select("id,request_number,departure_at,expected_return_at,status")
+      .eq("student_id", overrideStudentId)
+      .in("status", overrideDirection === "exit" ? ["approved"] : ["approved", "overdue"])
+      .order("departure_at", { ascending: false })
+      .then(({ data, error }) => { if (alive) setOverrideLeaves(error ? [] : data || []); });
+    return () => { alive = false; };
+  }, [overrideStudentId, overrideDirection]);
+
   const handleRevokePass = async (e) => {
     e.preventDefault();
     if (!revokingPassId) return;
@@ -197,6 +212,10 @@ export default function GateManagement() {
       toast.error("Please select a student.");
       return;
     }
+    if (!overrideRequestId) {
+      toast.error("Choose an approved leave request for this student.");
+      return;
+    }
     if (overrideReason.trim().length < 5) {
       toast.error("Please provide an override reason of at least 5 characters.");
       return;
@@ -208,10 +227,12 @@ export default function GateManagement() {
         student_id: overrideStudentId,
         event_type: overrideDirection,
         override_reason: overrideReason.trim(),
+        leave_request_id: overrideRequestId,
       });
       toast.success(`Manual ${overrideDirection} override executed.`);
       setShowOverrideModal(false);
       setOverrideStudentId("");
+      setOverrideRequestId("");
       setOverrideReason("");
       setOverrideSearch("");
       fetchPresence();
@@ -741,7 +762,7 @@ export default function GateManagement() {
               </button>
             </div>
             <p className="form-note">
-              Direct administrative movement log. Records movement and updates student presence.
+              Administrative correction requires an approved, unexpired leave request and is recorded in the audit log.
             </p>
 
             <form onSubmit={handleManualOverride} className="override-form">
@@ -774,6 +795,14 @@ export default function GateManagement() {
                   ))}
                 </div>
               )}
+
+              <label>
+                <strong>Approved Leave Request</strong>
+                <select value={overrideRequestId} required disabled={!overrideLeaves.length} onChange={(e) => setOverrideRequestId(e.target.value)}>
+                  <option value="">{overrideLeaves.length ? "Select approved leave" : "No approved leave available"}</option>
+                  {overrideLeaves.map((leave) => <option key={leave.id} value={leave.id}>{leave.request_number} · {leave.status} · returns {new Date(leave.expected_return_at).toLocaleString()}</option>)}
+                </select>
+              </label>
 
               <label>
                 <strong>Movement Direction</strong>
@@ -810,7 +839,7 @@ export default function GateManagement() {
                 <Button
                   type="submit"
                   variant="primary"
-                  disabled={submittingOverride || !overrideStudentId || overrideReason.trim().length < 5}
+                  disabled={submittingOverride || !overrideStudentId || !overrideRequestId || overrideReason.trim().length < 5}
                 >
                   {submittingOverride ? "Recording…" : "Confirm Override"}
                 </Button>

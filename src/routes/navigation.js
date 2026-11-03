@@ -13,6 +13,7 @@ import {
   Settings,
   BellRing,
   ContactRound,
+  Shield,
 } from "lucide-react";
 export const navigation = [
   { label: "Dashboard", path: "dashboard", icon: LayoutDashboard },
@@ -43,6 +44,12 @@ export const navigation = [
     icon: ScanLine,
     description:
       "Verify digital gate passes and track student entry and exit securely.",
+  },
+  {
+    label: "Security Guards",
+    path: "security-guards",
+    icon: Shield,
+    description: "Create guard accounts and enable or disable gate access.",
   },
   {
     label: "Mess Management",

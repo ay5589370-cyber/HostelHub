@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, setupError } from "../lib/supabase";
 import { canAccess, homeFor } from "../utils/access";
@@ -34,6 +34,7 @@ export function SetupNotice() {
   );
 }
 export function ProtectedRoute() {
+  const location = useLocation();
   const { session, profile, loading, error, refreshProfile } = useAuth();
   if (!supabase) return <SetupNotice />;
   if (loading)
@@ -43,7 +44,7 @@ export function ProtectedRoute() {
       </main>
     );
   if (error) return <ErrorState message={error} onRetry={refreshProfile} />;
-  if (!session) return <Navigate to="/login" replace />;
+  if (!session) return <Navigate to="/login" replace state={{ from: location }} />;
   if (profile?.role === "student" && profile.must_change_password)
     return <Navigate to="/reset-password?first=1" replace />;
   return <Outlet />;
