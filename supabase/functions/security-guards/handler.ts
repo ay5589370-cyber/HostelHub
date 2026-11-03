@@ -7,6 +7,17 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("set_active"), guard_id: z.string().uuid(), is_active: z.boolean() }).strict(),
 ]);
 
+function getVerifiedUserId(jwt: string) {
+  try {
+    // Supabase verifies this JWT at the gateway (verify_jwt=true). The profile
+    // lookup below performs role authorization before any admin action.
+    const payload = JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.role === "authenticated" && typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
 export function createSecurityGuardsHandler(
   clientFactory: () => SupabaseClient = () => {
     const url = Deno.env.get("SUPABASE_URL");
@@ -34,22 +45,13 @@ export function createSecurityGuardsHandler(
     if (req.method !== "POST") return json(405, { error: "POST required." });
     const jwt = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
     if (!jwt) return json(401, { error: "Sign in to continue." });
-    const requestApiKey = req.headers.get("apikey");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    if (!requestApiKey || !supabaseUrl) return json(401, { error: "A valid signed-in session is required." });
+    const userId = getVerifiedUserId(jwt);
+    if (!userId) return json(401, { error: "Invalid session." });
 
     try {
       const client = clientFactory();
-      // Verify the caller's JWT with the public request key. Keep service-role
-      // credentials confined to the separate client used for admin operations.
-      const authClient = createClient(supabaseUrl, requestApiKey, {
-        global: { headers: { Authorization: `Bearer ${jwt}` } },
-        auth: { persistSession: false, autoRefreshToken: false },
-      });
-      const { data: { user }, error: authError } = await authClient.auth.getUser(jwt);
-      if (authError || !user) return json(401, { error: "Invalid session." });
       const { data: actor, error: actorError } = await client.from("profiles")
-        .select("role,is_active").eq("id", user.id).maybeSingle();
+        .select("role,is_active").eq("id", userId).maybeSingle();
       if (actorError || actor?.role !== "admin" || !actor.is_active)
         return json(403, { error: "Administrator access required." });
 

@@ -6,6 +6,17 @@ const requestSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("manual_override"), student_id: z.string().uuid(), leave_request_id: z.string().uuid(), event_type: z.enum(["exit", "entry"]), override_reason: z.string().trim().min(5).max(500), location: z.string().trim().max(100).optional() }).strict(),
 ]);
 
+function getVerifiedUserId(jwt: string) {
+  try {
+    // Supabase verifies this JWT at the gateway (verify_jwt=true). The profile
+    // lookup below performs role authorization before any gate operation.
+    const payload = JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.role === "authenticated" && typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
 export function createGateHandler(
   clientFactory: () => SupabaseClient = () => {
     const url = Deno.env.get("SUPABASE_URL");
@@ -38,23 +49,13 @@ export function createGateHandler(
 
     const jwt = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
     if (!jwt) return json(401, { error: "Sign in with a security guard account." });
-    const requestApiKey = req.headers.get("apikey");
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    if (!requestApiKey || !supabaseUrl) return json(401, { error: "A valid signed-in session is required." });
+    const userId = getVerifiedUserId(jwt);
+    if (!userId) return json(401, { error: "Invalid session." });
 
     try {
       const client = clientFactory();
-      // Validate the session with the request's public key; use the service
-      // client only for the role lookup and transactional gate RPCs.
-      const authClient = createClient(supabaseUrl, requestApiKey, {
-        global: { headers: { Authorization: `Bearer ${jwt}` } },
-        auth: { persistSession: false, autoRefreshToken: false },
-      });
-      const { data: { user }, error: authError } = await authClient.auth.getUser(jwt);
-      if (authError || !user) return json(401, { error: "Invalid session." });
-
       const { data: guard, error: guardError } = await client
-        .from("profiles").select("role,is_active").eq("id", user.id).maybeSingle();
+        .from("profiles").select("role,is_active").eq("id", userId).maybeSingle();
       const raw = await req.text();
       if (raw.length > 4096) return json(413, { error: "Request too large." });
       let parsed: unknown;
@@ -68,7 +69,7 @@ export function createGateHandler(
 
       if (input.action === "manual_override") {
         const { data, error } = await client.rpc("record_gate_override", {
-          p_admin_id: user.id,
+          p_admin_id: userId,
           p_student_id: input.student_id,
           p_leave_request_id: input.leave_request_id,
           p_event_type: input.event_type,
@@ -80,7 +81,7 @@ export function createGateHandler(
       }
 
       const { data, error } = await client.rpc("record_gate_movement", {
-        p_guard_id: user.id,
+        p_guard_id: userId,
         p_pass_id: input.pass_id,
         p_token: input.token.toLowerCase(),
         p_action: input.action === "verify" ? "VERIFY" : input.action,
