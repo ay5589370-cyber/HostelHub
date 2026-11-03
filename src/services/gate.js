@@ -61,6 +61,18 @@ export async function getAdminGateMonitoring({ date = new Date(), studentId = ""
   };
 }
 
+export async function listStudentsCurrentlyOutside() {
+  const { data, error } = await supabase
+    .from("student_presence")
+    .select(`student_id,expected_return_at,
+      students!inner(full_name,student_id),
+      leave_requests!active_leave_id(request_number,leave_type,departure_at,expected_return_at,status)`)
+    .eq("status", "outside")
+    .order("expected_return_at", { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
 export function manageSecurityGuards(payload) {
   return invokeGateFunction("security-guards", payload);
 }

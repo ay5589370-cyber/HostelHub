@@ -34,10 +34,19 @@ export function createSecurityGuardsHandler(
     if (req.method !== "POST") return json(405, { error: "POST required." });
     const jwt = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
     if (!jwt) return json(401, { error: "Sign in to continue." });
+    const requestApiKey = req.headers.get("apikey");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    if (!requestApiKey || !supabaseUrl) return json(401, { error: "A valid signed-in session is required." });
 
     try {
       const client = clientFactory();
-      const { data: { user }, error: authError } = await client.auth.getUser(jwt);
+      // Verify the caller's JWT with the public request key. Keep service-role
+      // credentials confined to the separate client used for admin operations.
+      const authClient = createClient(supabaseUrl, requestApiKey, {
+        global: { headers: { Authorization: `Bearer ${jwt}` } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: { user }, error: authError } = await authClient.auth.getUser(jwt);
       if (authError || !user) return json(401, { error: "Invalid session." });
       const { data: actor, error: actorError } = await client.from("profiles")
         .select("role,is_active").eq("id", user.id).maybeSingle();

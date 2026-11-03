@@ -38,10 +38,19 @@ export function createGateHandler(
 
     const jwt = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
     if (!jwt) return json(401, { error: "Sign in with a security guard account." });
+    const requestApiKey = req.headers.get("apikey");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    if (!requestApiKey || !supabaseUrl) return json(401, { error: "A valid signed-in session is required." });
 
     try {
       const client = clientFactory();
-      const { data: { user }, error: authError } = await client.auth.getUser(jwt);
+      // Validate the session with the request's public key; use the service
+      // client only for the role lookup and transactional gate RPCs.
+      const authClient = createClient(supabaseUrl, requestApiKey, {
+        global: { headers: { Authorization: `Bearer ${jwt}` } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: { user }, error: authError } = await authClient.auth.getUser(jwt);
       if (authError || !user) return json(401, { error: "Invalid session." });
 
       const { data: guard, error: guardError } = await client
