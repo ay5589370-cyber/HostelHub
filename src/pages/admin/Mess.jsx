@@ -198,6 +198,18 @@ export default function AdminMess() {
         title="Mess management"
         description="Publish meal menus, post service notices, and review resident feedback and mess reports."
       />
+      <div className="mess-dining-banner">
+        <img
+          src="/images/mess-dining.jpg"
+          alt="Hostel Dining Hall"
+        />
+        <div className="mess-dining-caption">
+          <div>
+            <h3>Campus Dining & Nutrition</h3>
+            <p>Publish daily meals, configure weekly routines, and oversee nutritional standards.</p>
+          </div>
+        </div>
+      </div>
       <section className="panel mess-routine-panel">
         <div className="student-section-heading">
           <div>

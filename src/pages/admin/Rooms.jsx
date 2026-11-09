@@ -40,6 +40,19 @@ export default function Rooms() {
         title="Rooms & beds"
         description="Organize your campus and keep every assignment accounted for."
       />
+      <div className="room-showcase-card">
+        <img
+          src="/images/hostel-room.jpg"
+          alt="Modern hostel dorm room accommodation"
+          className="room-showcase-img"
+        />
+        <div className="room-showcase-content">
+          <h3>Residential Accommodation Standard</h3>
+          <p>
+            Standardized double-occupancy and single units equipped with study desks, ergonomic chairs, individual wardrobes, and high-speed Wi-Fi connectivity.
+          </p>
+        </div>
+      </div>
       {error && (
         <p className="form-error" role="alert">
           {error}

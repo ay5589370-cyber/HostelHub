@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
+  BedDouble,
+  Building2,
   CalendarDays,
   CircleCheck,
   CircleX,
@@ -134,53 +136,77 @@ function TodayMealCard({ messRoutine }) {
   });
 
   return (
-    <section className="panel student-today-meal" aria-label="Today's meal">
-      <div className="student-today-meal-copy">
-        <div className="eyebrow">TODAY AT THE MESS</div>
-        <h2>Today's meal</h2>
-        <p className="student-today-meal-date">{dateLabel}</p>
-        {meal ? (
-          <>
-            <span className={`student-meal-state${current ? " is-current" : ""}`}>
-              {stateLabel}
-            </span>
-            <h3>{mealNames[meal.meal_slot]}</h3>
-            <p className="student-today-menu">{meal.menu_text}</p>
-            <p className="student-today-meal-time">
-              {meal.start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-              {" – "}
-              {meal.end.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-            </p>
-          </>
-        ) : (
-          <>
-            <span className="student-meal-state">Done for today</span>
-            <h3>No more meals scheduled today</h3>
-            <p className="student-today-menu">Check back tomorrow for the next day's meal routine.</p>
-          </>
-        )}
+    <section className="panel student-today-meal student-today-meal-with-img" aria-label="Today's meal">
+      <div className="student-meal-photo-wrap">
+        <img
+          src="/images/mess-dining.jpg"
+          alt="Campus Dining Hall"
+          className="student-meal-photo"
+        />
+        <span className="student-meal-photo-badge">Campus Dining</span>
       </div>
-      <div
-        className="student-meal-countdown"
-        role="timer"
-        aria-label={countdown ? `${countdownLabel} ${countdown.main} and ${countdown.seconds} seconds` : "Today's meals are complete"}
-      >
-        <svg viewBox="0 0 100 100" aria-hidden="true">
-          <circle className="student-meal-ring-track" cx="50" cy="50" r="44" />
-          <circle
-            className="student-meal-ring-progress"
-            cx="50"
-            cy="50"
-            r="44"
-            strokeDasharray={ringLength}
-            strokeDashoffset={ringLength * (1 - progress)}
-          />
-        </svg>
-        <span className="student-meal-countdown-value">
-          <strong>{countdown?.main || "—"}</strong>
-          {countdown && <small>{countdown.seconds}s</small>}
-        </span>
-        <span className="student-meal-countdown-label">{countdown ? countdownLabel : "No more meals"}</span>
+      <div className="student-today-meal-body">
+        <div className="student-today-meal-copy">
+          <div className="eyebrow">TODAY AT THE MESS</div>
+          <h2>Today's meal</h2>
+          <p className="student-today-meal-date">{dateLabel}</p>
+          {meal ? (
+            <>
+              <span className={`student-meal-state${current ? " is-current" : ""}`}>
+                {stateLabel}
+              </span>
+              <h3>{mealNames[meal.meal_slot]}</h3>
+              <p className="student-today-menu">{meal.menu_text}</p>
+              <div className="student-today-meal-timing-row">
+                <p className="student-today-meal-time">
+                  <Clock3 size={15} />
+                  <span>
+                    {meal.start.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                    {" – "}
+                    {meal.end.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                  </span>
+                </p>
+                {countdown && (
+                  <span
+                    className={`student-meal-countdown-pill ${current ? "is-serving" : "is-starting"}`}
+                    role="status"
+                  >
+                    <span className="countdown-pulse-dot" aria-hidden="true" />
+                    <span>{current ? "Remaining time: " : "Starts in: "}</span>
+                    <strong>{countdown.main}:{countdown.seconds}</strong>
+                  </span>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="student-meal-state">Done for today</span>
+              <h3>No more meals scheduled today</h3>
+              <p className="student-today-menu">Check back tomorrow for the next day's meal routine.</p>
+            </>
+          )}
+        </div>
+        <div
+          className="student-meal-countdown"
+          role="timer"
+          aria-label={countdown ? `${countdownLabel} ${countdown.main} and ${countdown.seconds} seconds` : "Today's meals are complete"}
+        >
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <circle className="student-meal-ring-track" cx="50" cy="50" r="44" />
+            <circle
+              className="student-meal-ring-progress"
+              cx="50"
+              cy="50"
+              r="44"
+              strokeDasharray={ringLength}
+              strokeDashoffset={ringLength * (1 - progress)}
+            />
+          </svg>
+          <span className="student-meal-countdown-value">
+            <strong>{countdown?.main || "—"}</strong>
+            {countdown && <small>{countdown.seconds}s</small>}
+          </span>
+        </div>
       </div>
     </section>
   );
@@ -233,6 +259,20 @@ function StudentPortal() {
   return (
     <StudentWorkspace dashboard>
       <div className="student-portal-content">
+        <section className="student-welcome-banner" role="region" aria-label="Campus living welcome">
+          <img
+            src="/images/campus-hero.jpg"
+            alt="Campus hostel buildings"
+          />
+          <div className="student-welcome-overlay">
+            <span className="admin-hero-badge">
+              <Building2 size={13} /> Campus Residence
+            </span>
+            <h1>Welcome back, {student.full_name?.split(" ")[0] || "Student"}!</h1>
+            <p>Your connected student hub for campus accommodation, dining routines, and gate passes.</p>
+          </div>
+        </section>
+
         <section className="student-identity-card panel" aria-label="Student information">
           <div className="student-identity-main">
             <StudentAvatar student={student} />
@@ -377,21 +417,33 @@ function StudentPortal() {
             )}
           </section>
 
-          <section className="panel student-hostel-info">
-            <div className="student-section-heading">
-              <div>
-                <div className="eyebrow">YOUR RESIDENCE</div>
-                <h2>Hostel information</h2>
-              </div>
-              <MapPinned size={19} />
+          <section className="panel student-hostel-info student-residence-card">
+            <div className="student-residence-header">
+              <img
+                src="/images/hostel-room.jpg"
+                alt="Student dorm room accommodation"
+                className="student-residence-img"
+              />
+              <span className="student-residence-badge">
+                <BedDouble size={14} /> Assigned Residence
+              </span>
             </div>
-            <dl>
-              <div><dt>Hostel</dt><dd>{hostel?.name || "Not assigned"}</dd></div>
-              <div><dt>Block</dt><dd>{hostel?.block || "Not available"}</dd></div>
-              <div><dt>Room</dt><dd>{room?.room_number || "Not assigned"}</dd></div>
-              <div><dt>Bed</dt><dd>{bed?.bed_number || "Not assigned"}</dd></div>
-              <div><dt>Hostel address</dt><dd>{hostel?.address || "Not available"}</dd></div>
-            </dl>
+            <div className="student-residence-body">
+              <div className="student-section-heading">
+                <div>
+                  <div className="eyebrow">YOUR RESIDENCE</div>
+                  <h2>Hostel information</h2>
+                </div>
+                <MapPinned size={19} />
+              </div>
+              <dl>
+                <div><dt>Hostel</dt><dd>{hostel?.name || "Not assigned"}</dd></div>
+                <div><dt>Block</dt><dd>{hostel?.block || "Not available"}</dd></div>
+                <div><dt>Room</dt><dd>{room?.room_number || "Not assigned"}</dd></div>
+                <div><dt>Bed</dt><dd>{bed?.bed_number || "Not assigned"}</dd></div>
+                <div><dt>Hostel address</dt><dd>{hostel?.address || "Not available"}</dd></div>
+              </dl>
+            </div>
           </section>
 
           <section className="panel student-profile-access">

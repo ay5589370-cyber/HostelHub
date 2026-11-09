@@ -70,6 +70,23 @@ export default function Dashboard() {
   return (
     <div className="admin-dashboard">
       {pageHeader}
+      <div className="admin-hero-banner" role="region" aria-label="Campus overview">
+        <img
+          src="/images/campus-hero.jpg"
+          alt="HostelHub Campus"
+          className="admin-hero-img"
+        />
+        <div className="admin-hero-overlay">
+          <span className="admin-hero-badge">
+            <Building2 size={13} /> Campus Residence
+          </span>
+          <h2>Modern, Connected Student Living</h2>
+          <p>
+            Real-time operations management for housing allocations, resident
+            movements, mess services, and campus safety.
+          </p>
+        </div>
+      </div>
       <div className="section-heading">
         <h2>
           Overview <span className="badge subtle">LIVE DATA</span>
